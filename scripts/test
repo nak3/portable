@@ -34,11 +34,7 @@ if [ `uname` = "Darwin" ]; then
 		cd build-static
 		cmake -DCMAKE_OSX_ARCHITECTURES=$ARCH ..
 		make -j 4
-		if [ "$ARCH" = "arm64" ] && [ "$OS" = "macos-12" ] || [ "$OS" = "macos-13" ]; then
-			echo "##### skip tests"
-		else
-			make test
-		fi
+		make test
 	)
 
 	(
@@ -46,11 +42,7 @@ if [ `uname` = "Darwin" ]; then
 		cd build-shared
 		cmake -DBUILD_SHARED_LIBS=ON -DCMAKE_OSX_ARCHITECTURES=$ARCH ..
 		make -j 4
-		if [ "$ARCH" = "arm64" ] && [ "$OS" = "macos-12" ] || [ "$OS" = "macos-13" ]; then
-			echo "##### skip tests"
-		else
-			make test
-		fi
+		make test
 	)
 
 # assuming Linux below
