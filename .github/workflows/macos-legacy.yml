@@ -1,5 +1,5 @@
 # GitHub Actions workflow to run tests on macOS.
-name: "macOS"
+name: "macOS-legacy"
 
 on:
   push: {}
