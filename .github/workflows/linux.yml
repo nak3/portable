@@ -62,7 +62,7 @@ jobs:
         env:
           ARCH: "native"
           CC: "clang"
-          CFLAGS: "-ggdb -fsanitize=memory"
-          LDFLAGS: "-fsanitize=memory"
+          CFLAGS: "-ggdb -fsanitize=thread"
+          LDFLAGS: "-fsanitize=thread"
           ENABLE_ASM: "${{ matrix.asm }}"
           CTEST_OUTPUT_ON_FAILURE: 1
