@@ -64,8 +64,8 @@ jobs:
         run: ./scripts/test
         env:
           ARCH: "native"
-          CC: "clang"
-          CFLAGS: "-ggdb -fsanitize=address"
-          LDFLAGS: "-fsanitize=address"
+          CC: "clang -D__STRICT_ALIGNMENT"
+          CFLAGS: "-ggdb -fsanitize=address,undefined -fno-sanitize-recover=all"
+          LDFLAGS: "-fsanitize=address,undefined -fno-sanitize-recover=all"
           ENABLE_ASM: "${{ matrix.asm }}"
           CTEST_OUTPUT_ON_FAILURE: 1
