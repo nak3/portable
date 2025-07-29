@@ -33,13 +33,21 @@ jobs:
 
       - name: "Run rust-openssl tests"
         run: |
+          # Extract the current LibreSSL version from opensslv.h
+          version=$(awk -F\" '/^#define[ \t]+LIBRESSL_VERSION_TEXT/ { print $2 }' ./openbsd/src/lib/libcrypto/opensslv.h | sed -E 's/LibreSSL[[:space:]]+//')
+          IFS=. read major minor patch <<EOF
+          $version
+          EOF
+          # Increment the minor version; reset patch version to 0
+          minor=$((minor + 1))
+          patch=0
+          # Format the version as a Rust tuple string.
+          tuple="('$major', '$minor', '$patch')"
+
           cd rust-openssl
           # instead of erroring use the last supported version
           ed -s openssl-sys/build/main.rs <<-EOF
-          /_ => version_error/-1
-          .t.
-          s/(.*=/_ =
-          +1d
+          g/_ => version_error()/s//_ => ${tuple}/
           w
           q
           EOF
