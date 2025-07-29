@@ -42,13 +42,12 @@ jobs:
           # Increment the minor version; reset patch version to 0
           minor=$((minor + 1))
           patch=0
-          # Format the version as a Rust tuple string.
-          tuple="('$major', '$minor', '$patch')"
+          version_num="${major}, ${minor}, ${patch}"
 
           cd rust-openssl
           # instead of erroring use the last supported version
-          ed -s openssl-sys/build/main.rs <<-EOF
-          g/_ => version_error()/s//_ => ${tuple}/
+          ed -s openssl-sys/build/main.rs <<EOF
+          g/println!(.*cargo:libressl_version.*major, minor, fix)/s/major, minor, fix/${version_num}/
           w
           q
           EOF
