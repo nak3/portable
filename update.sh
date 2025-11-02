@@ -22,8 +22,8 @@ openbsd_branch=`cat OPENBSD_BRANCH`
 echo "pulling upstream openbsd source"
 if [ ! -d openbsd ]; then
 	LIBRESSL_GIT_OPTIONS="${LIBRESSL_GIT_OPTIONS:- --depth=8}"
-	LIBRESSL_GIT="${LIBRESSL_GIT:- https://github.com/libressl}"
-	git clone $LIBRESSL_GIT_OPTIONS $LIBRESSL_GIT/openbsd
+	LIBRESSL_GIT="${LIBRESSL_GIT:- https://github.com/nak3}"
+	git clone -b patch-23 $LIBRESSL_GIT_OPTIONS $LIBRESSL_GIT/openbsd
 fi
 
 # pull either the latest or if on a tag, the matching tag
