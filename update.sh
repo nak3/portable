@@ -341,6 +341,7 @@ $CP $libcrypto_regress/aead/*.txt tests
 $CP $libcrypto_regress/ct/ctlog.conf tests
 $CP $libcrypto_regress/ct/*.crt tests
 $CP $libcrypto_regress/x509/make-dir-roots.pl tests
+$CP $libcrypto_regress/x509/callback.pl tests
 rm -rf tests/certs
 mkdir -p tests/certs
 for i in $libcrypto_regress/certs/[0-9]*; do

@@ -104,6 +104,7 @@ EXTRA_DIST = CMakeLists.txt
 DISTCLEANFILES = pidwraptest.txt
 
 distclean-local:
+	rm -rf x509_callback-certs
 	rm -rf x509_verify-certs
 
 # XXX - should probably be in their own static lib
@@ -353,8 +354,16 @@ TESTS += bytestringtest
 check_PROGRAMS += bytestringtest
 bytestringtest_SOURCES = bytestringtest.c
 
-# callback
-# callbackfailures
+# x509_callback
+if HAVE_PERL
+TESTS += x509_callback.sh
+check_PROGRAMS += callback callbackfailures expirecallback
+endif
+callback_SOURCES = callback.c
+callbackfailures_SOURCES = callbackfailures.c
+expirecallback_SOURCES = expirecallback.c
+EXTRA_DIST += x509_callback.sh
+EXTRA_DIST += callback.pl
 
 # casttest
 TESTS += casttest
@@ -506,8 +515,6 @@ evp_test_SOURCES = evp_test.c
 TESTS += exdata_test
 check_PROGRAMS += exdata_test
 exdata_test_SOURCES = exdata_test.c
-
-# expirecallback.c
 
 # explicit_bzero
 # explicit_bzero relies on SA_ONSTACK, which is unavailable on Windows

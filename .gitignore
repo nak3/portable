@@ -104,6 +104,9 @@ tests/bn_to_string*
 tests/bn_unit*
 tests/bn_word*
 tests/callback*
+!tests/callback.c
+!tests/callback.pl
+!tests/callbackfailures.c
 tests/cipher*
 tests/constraints*
 tests/crypto_test*
@@ -170,6 +173,7 @@ tests/handshake_table*
 tests/bn_general*
 tests/bn_mul_div*
 tests/expirecallback*
+!tests/expirecallback.c
 tests/wycheproof-primes*
 
 # update.sh creates this for some reason

@@ -333,8 +333,24 @@ add_executable(bytestringtest bytestringtest.c)
 target_link_libraries(bytestringtest ${OPENSSL_TEST_LIBS})
 add_platform_test(bytestringtest bytestringtest)
 
-# callback
-# callbackfailures
+# x509_callback
+add_executable(callback callback.c)
+target_link_libraries(callback ${OPENSSL_TEST_LIBS})
+add_dependencies(callback openssl)
+add_executable(callbackfailures callbackfailures.c)
+target_link_libraries(callbackfailures ${OPENSSL_TEST_LIBS})
+add_dependencies(callbackfailures openssl)
+add_executable(expirecallback expirecallback.c)
+target_link_libraries(expirecallback ${OPENSSL_TEST_LIBS})
+add_dependencies(expirecallback openssl)
+if(NOT WIN32 AND NOT EMSCRIPTEN AND PERL_EXECUTABLE)
+	add_test(NAME x509_callback COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/x509_callback.sh
+	    $<TARGET_FILE:callback> $<TARGET_FILE:expirecallback>
+	    $<TARGET_FILE:callbackfailures> $<TARGET_FILE:openssl>)
+	set_tests_properties(x509_callback PROPERTIES
+	    ENVIRONMENT "srcdir=${TEST_SOURCE_DIR};PERL=${PERL_EXECUTABLE}"
+	    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+endif()
 
 # casttest
 add_executable(casttest casttest.c)
@@ -488,8 +504,6 @@ add_platform_test(evp_test evp_test)
 add_executable(exdata_test exdata_test.c)
 target_link_libraries(exdata_test ${OPENSSL_TEST_LIBS})
 add_platform_test(exdata_test exdata_test)
-
-# expirecallback.c
 
 # explicit_bzero
 # SA_ONSTACK is unavailable on Windows, sigsuspend is unavailable on Emscripten
