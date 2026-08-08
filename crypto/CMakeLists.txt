@@ -846,15 +846,6 @@ elseif(HOST_X86_64)
 endif()
 
 if(MSVC)
-	if(HOST_AARCH64)
-		# Optimized Montgomery multiplication produces incorrect results with
-		# MSVC 19.44 on ARM64.
-		message(STATUS "Disabling MSVC optimization for ARM64 bn_mont.c")
-		set_source_files_properties(bn/bn_mont.c PROPERTIES
-			COMPILE_OPTIONS "/Od;/Ob0"
-		)
-	endif()
-
 	# "C4701" - Potentially uninitialized local variable 'name' used
 	set_source_files_properties(bn/bn_convert.c pem/pem_lib.c PROPERTIES
 		COMPILE_OPTIONS /wd4701
