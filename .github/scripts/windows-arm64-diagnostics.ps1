@@ -124,7 +124,8 @@ function Test-Configuration {
         [string]$Toolset,
         [string]$ReleaseFlags,
         [string[]]$AdditionalCMakeArguments,
-        [switch]$FullSuite
+        [switch]$FullSuite,
+        [switch]$VerboseBuild
     )
 
     $configureArguments = @(
@@ -151,10 +152,14 @@ function Test-Configuration {
         return
     }
 
-    $exitCode = Invoke-DiagnosticCommand "$Name build" "cmake" @(
+    $buildArguments = @(
         "--build", $BuildDirectory,
         "--config", "Release"
     )
+    if ($VerboseBuild) {
+        $buildArguments += "--verbose"
+    }
+    $exitCode = Invoke-DiagnosticCommand "$Name build" "cmake" $buildArguments
     Add-Result $Name "build" $exitCode
     if ($exitCode -ne 0) {
         return
@@ -198,6 +203,12 @@ Test-Configuration `
     -BuildDirectory "build-bn-mont-noinline" `
     -AdditionalCMakeArguments @("-D", "MSVC_ARM64_BN_MONT_NOINLINE=ON") `
     -FullSuite
+Test-Configuration `
+    -Name "MSVC optimized, bn_mont O1" `
+    -BuildDirectory "build-bn-mont-o1" `
+    -AdditionalCMakeArguments @("-D", "MSVC_ARM64_BN_MONT_O1=ON") `
+    -FullSuite `
+    -VerboseBuild
 Test-Configuration "ClangCL optimized" "build-clangcl" "ClangCL" ""
 
 $summary = @(
