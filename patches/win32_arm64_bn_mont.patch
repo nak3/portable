@@ -1,0 +1,26 @@
+--- crypto/bn/bn_mont.c.orig	Sat Aug  8 16:46:00 2026
++++ crypto/bn/bn_mont.c	Sat Aug  8 16:46:00 2026
+@@ -431,7 +431,13 @@ bn_mod_mul_montgomery_simple(BIGNUM *r, const BIGNUM *a, const BIGNUM *b,
+ 	return ret;
+ }
+ 
+-static inline void
++#if defined(LIBRESSL_BN_MONT_WORD_NOINLINE)
++#define BN_MONT_WORD_INLINE __declspec(noinline)
++#else
++#define BN_MONT_WORD_INLINE inline
++#endif
++
++static BN_MONT_WORD_INLINE void
+ bn_montgomery_multiply_word(const BN_ULONG *ap, BN_ULONG b, const BN_ULONG *np,
+     BN_ULONG *tp, BN_ULONG w, BN_ULONG *carry_a, BN_ULONG *carry_n, int n_len)
+ {
+@@ -461,6 +467,8 @@ bn_montgomery_multiply_word(const BN_ULONG *ap, BN_ULONG b, const BN_ULONG *np,
+ 	}
+ }
+ 
++#undef BN_MONT_WORD_INLINE
++
+ /*
+  * bn_montgomery_multiply_words() computes r = aR * bR * R^-1 = abR for the
+  * given word arrays. The caller must ensure that rp, ap, bp and np are all

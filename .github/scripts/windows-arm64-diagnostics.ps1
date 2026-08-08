@@ -212,9 +212,9 @@ Test-Configuration `
     -AdditionalCMakeArguments @("-D", "MSVC_ARM64_BN_MONT_NOINLINE=ON") `
     -FullSuite
 Test-Configuration `
-    -Name "MSVC optimized, bn_mont Ob1" `
-    -BuildDirectory "build-bn-mont-ob1" `
-    -AdditionalCMakeArguments @("-D", "MSVC_ARM64_BN_MONT_OB1=ON") `
+    -Name "MSVC optimized, multiply word no inlining" `
+    -BuildDirectory "build-bn-mont-word-noinline" `
+    -AdditionalCMakeArguments @("-D", "MSVC_ARM64_BN_MONT_WORD_NOINLINE=ON") `
     -FullSuite `
     -VerboseBuild
 Test-Configuration "ClangCL optimized" "build-clangcl" "ClangCL" ""

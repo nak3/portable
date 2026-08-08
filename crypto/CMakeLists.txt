@@ -852,10 +852,10 @@ if(MSVC)
 			COMPILE_OPTIONS /Ob0
 		)
 	endif()
-	if(HOST_AARCH64 AND MSVC_ARM64_BN_MONT_OB1)
-		message(STATUS "Using MSVC /Ob1 for ARM64 bn_mont.c")
+	if(HOST_AARCH64 AND MSVC_ARM64_BN_MONT_WORD_NOINLINE)
+		message(STATUS "Disabling MSVC inlining for bn_montgomery_multiply_word()")
 		set_source_files_properties(bn/bn_mont.c PROPERTIES
-			COMPILE_OPTIONS /Ob1
+			COMPILE_DEFINITIONS LIBRESSL_BN_MONT_WORD_NOINLINE
 		)
 	endif()
 
