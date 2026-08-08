@@ -852,10 +852,10 @@ if(MSVC)
 			COMPILE_OPTIONS /Ob0
 		)
 	endif()
-	if(HOST_AARCH64 AND MSVC_ARM64_BN_MONT_O1)
-		message(STATUS "Using MSVC /O1 for ARM64 bn_mont.c")
+	if(HOST_AARCH64 AND MSVC_ARM64_BN_MONT_OB1)
+		message(STATUS "Using MSVC /Ob1 for ARM64 bn_mont.c")
 		set_source_files_properties(bn/bn_mont.c PROPERTIES
-			COMPILE_OPTIONS /O1
+			COMPILE_OPTIONS /Ob1
 		)
 	endif()
 
