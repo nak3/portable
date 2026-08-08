@@ -1,0 +1,25 @@
+--- crypto/bn/arch/aarch64/bn_arch.h.orig	Sat Aug  8 14:00:00 2026
++++ crypto/bn/arch/aarch64/bn_arch.h	Sat Aug  8 14:00:00 2026
+@@ -23,6 +23,22 @@
+ 
+ #ifndef OPENSSL_NO_ASM
+ 
++#if defined(_MSC_VER) && defined(_M_ARM64)
++
++#include <intrin.h>
++
++#define HAVE_BN_MULW
++
++static inline void
++bn_mulw(BN_ULONG a, BN_ULONG b, BN_ULONG *out_r1, BN_ULONG *out_r0)
++{
++	*out_r1 = (BN_ULONG)__umulh((unsigned __int64)a,
++	    (unsigned __int64)b);
++	*out_r0 = a * b;
++}
++
++#endif
++
+ #if defined(__GNUC__)
+ 
+ #define HAVE_BN_CLZW
