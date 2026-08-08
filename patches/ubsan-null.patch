@@ -1,14 +1,13 @@
 --- crypto/asn1/a_object.c.orig	Fri Aug  8 12:30:00 2026
 +++ crypto/asn1/a_object.c	Fri Aug  8 12:30:00 2026
-@@ -448,7 +448,10 @@ i2t_ASN1_OBJECT_internal(const ASN1_OBJECT *aobj, char
+@@ -448,7 +448,9 @@ i2t_ASN1_OBJECT_internal(const ASN1_OBJECT *aobj, char
  	if (!CBB_finish(&cbb, &data, &data_len))
  		goto err;
  
 -	ret = strlcpy(buf, data, buf_len);
-+	if (buf_len == 0)
-+		ret = (int)data_len - 1;
-+	else
-+		ret = strlcpy(buf, data, buf_len);
++	ret = (int)data_len - 1;
++	if (buf_len > 0)
++		strlcpy(buf, data, buf_len);
   err:
  	CBB_cleanup(&cbb);
  	free(data);
@@ -46,16 +45,13 @@
  	while (diff_len < 0) {
 --- crypto/bn/bn_convert.c.orig	Fri Aug  8 12:30:00 2026
 +++ crypto/bn/bn_convert.c	Fri Aug  8 12:30:00 2026
-@@ -101,7 +101,8 @@ bn_bn2binpad_internal(const BIGNUM *bn, uint8_t *out,
+@@ -101,3 +101,6 @@ bn_bn2binpad_internal(const BIGNUM *bn, uint8_t *out,
  		return -1;
  
++	if (out_len == 0)
++		return 0;
++
  	if (bn->dmax == 0) {
--		explicit_bzero(out, out_len);
-+		if (out_len > 0)
-+			explicit_bzero(out, out_len);
- 		return out_len;
- 	}
- 
 --- tests/bn_convert.c.orig	Fri Aug  8 12:30:00 2026
 +++ tests/bn_convert.c	Fri Aug  8 12:30:00 2026
 @@ -62,7 +62,7 @@ check_bin_output(size_t test_no, const char *label, co
