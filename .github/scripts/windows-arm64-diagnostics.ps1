@@ -172,9 +172,9 @@ foreach ($compilerFile in $compilerFiles) {
 }
 
 $diagnosticExitCode = Test-Configuration `
-    -Name "MSVC optimized, Montgomery primitives no inlining" `
-    -BuildDirectory "build-bn-primitives-noinline" `
-    -AdditionalCMakeArguments @("-D", "MSVC_ARM64_BN_PRIMITIVES_NOINLINE=ON") `
+    -Name "MSVC optimized, basic BN primitives no inlining" `
+    -BuildDirectory "build-bn-basic-primitives-noinline" `
+    -AdditionalCMakeArguments @("-D", "MSVC_ARM64_BN_BASIC_PRIMITIVES_NOINLINE=ON") `
     -VerboseBuild
 
 $summary = @(
