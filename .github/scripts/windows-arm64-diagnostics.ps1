@@ -12,24 +12,11 @@ $diagnosticsDir = Join-Path $PWD "arm64-diagnostics"
 New-Item -ItemType Directory -Force -Path $diagnosticsDir | Out-Null
 $logPath = Join-Path $diagnosticsDir "diagnostics.log"
 $summaryPath = Join-Path $diagnosticsDir "summary.md"
-$targetTests = @(
-    "bn_test",
+$gateTests = @(
     "bn_mod_exp",
     "bn_mod_sqrt",
-    "bn_primes",
     "cmstest",
-    "cttest",
-    "ecc_cdh",
-    "ec_asn1_test",
-    "ec_point_conversion",
-    "ecdhtest",
-    "ecdsatest",
-    "ectest",
-    "pkcs7test",
-    "policy",
-    "renegotiation_test",
-    "rsa_method_test",
-    "rsa_test"
+    "ecdhtest"
 )
 $testTimeoutSeconds = 60
 $slowTestTimeoutSeconds = 180
@@ -74,30 +61,26 @@ function Add-Result {
     })
 }
 
-function Invoke-DiagnosticTests {
+function Invoke-DiagnosticGateTests {
     param(
         [string]$Configuration,
         [string]$BuildDirectory
     )
 
-    foreach ($testName in $targetTests) {
-        $safeConfiguration = $Configuration -replace "[^A-Za-z0-9_.-]", "-"
-        $safeTestName = $testName -replace "[^A-Za-z0-9_.-]", "-"
-        $timeoutSeconds = if ($testName -eq "bn_primes") {
-            $slowTestTimeoutSeconds
-        } else {
-            $testTimeoutSeconds
-        }
-        $exitCode = Invoke-DiagnosticCommand "$Configuration test: $testName" "ctest" @(
-            "--test-dir", $BuildDirectory,
-            "-C", "Release",
-            "-R", "^$([regex]::Escape($testName))$",
-            "--timeout", "$timeoutSeconds",
-            "--output-on-failure",
-            "--output-log", (Join-Path $diagnosticsDir "$safeConfiguration-$safeTestName.log")
-        )
-        Add-Result $Configuration "test: $testName" $exitCode
-    }
+    $safeConfiguration = $Configuration -replace "[^A-Za-z0-9_.-]", "-"
+    $escapedTests = $gateTests | ForEach-Object { [regex]::Escape($_) }
+    $testRegex = "^($($escapedTests -join '|'))$"
+    $exitCode = Invoke-DiagnosticCommand "$Configuration gate tests" "ctest" @(
+        "--test-dir", $BuildDirectory,
+        "-C", "Release",
+        "-R", $testRegex,
+        "--timeout", "$testTimeoutSeconds",
+        "--output-on-failure",
+        "--output-log", (Join-Path $diagnosticsDir "$safeConfiguration-gate.log")
+    )
+    Add-Result $Configuration "gate tests" $exitCode
+
+    return $exitCode -eq 0
 }
 
 function Invoke-DiagnosticFullSuite {
@@ -121,12 +104,7 @@ function Test-Configuration {
     param(
         [string]$Name,
         [string]$BuildDirectory,
-        [string]$Toolset,
-        [string]$ReleaseFlags,
         [string[]]$AdditionalCMakeArguments,
-        [ValidateSet("ON", "OFF")]
-        [string]$Shared = "OFF",
-        [switch]$FullSuite,
         [switch]$VerboseBuild
     )
 
@@ -135,16 +113,10 @@ function Test-Configuration {
         "-B", $BuildDirectory,
         "-G", $Generator,
         "-A", "ARM64",
-        "-D", "BUILD_SHARED_LIBS=$Shared",
+        "-D", "BUILD_SHARED_LIBS=OFF",
         "-D", "CMAKE_INSTALL_PREFIX=../local",
         "-D", "PERL_EXECUTABLE=$Perl"
     )
-    if ($Toolset) {
-        $configureArguments += @("-T", $Toolset)
-    }
-    if ($ReleaseFlags) {
-        $configureArguments += @("-D", "CMAKE_C_FLAGS_RELEASE=$ReleaseFlags")
-    }
     if ($AdditionalCMakeArguments) {
         $configureArguments += $AdditionalCMakeArguments
     }
@@ -167,10 +139,8 @@ function Test-Configuration {
         return
     }
 
-    if ($FullSuite) {
+    if (Invoke-DiagnosticGateTests $Name $BuildDirectory) {
         Invoke-DiagnosticFullSuite $Name $BuildDirectory
-    } else {
-        Invoke-DiagnosticTests $Name $BuildDirectory
     }
 }
 
@@ -197,27 +167,11 @@ foreach ($compilerFile in $compilerFiles) {
         ForEach-Object { Write-Diagnostic $_.Line }
 }
 
-Invoke-DiagnosticTests "MSVC optimized" "build"
-
-Test-Configuration "MSVC no optimization" "build-noopt" "" "/Od /Ob0 /DNDEBUG"
-Test-Configuration `
-    -Name "MSVC optimized, bn_mont no inlining" `
-    -BuildDirectory "build-bn-mont-noinline" `
-    -AdditionalCMakeArguments @("-D", "MSVC_ARM64_BN_MONT_NOINLINE=ON") `
-    -FullSuite
-Test-Configuration `
-    -Name "MSVC shared, bn_mont no inlining" `
-    -BuildDirectory "build-shared-bn-mont-noinline" `
-    -Shared "ON" `
-    -AdditionalCMakeArguments @("-D", "MSVC_ARM64_BN_MONT_NOINLINE=ON") `
-    -FullSuite
 Test-Configuration `
     -Name "MSVC optimized, mulw addw no inlining" `
     -BuildDirectory "build-bn-mulw-addw-noinline" `
     -AdditionalCMakeArguments @("-D", "MSVC_ARM64_BN_MULW_ADDW_NOINLINE=ON") `
-    -FullSuite `
     -VerboseBuild
-Test-Configuration "ClangCL optimized" "build-clangcl" "ClangCL" ""
 
 $summary = @(
     "## Windows ARM64 diagnostic results",
@@ -230,8 +184,9 @@ foreach ($result in $results) {
 }
 $summary += @(
     "",
-    "Targeted tests: ``$($targetTests -join ', ')``",
-    "Per-test timeout: $testTimeoutSeconds seconds ($slowTestTimeoutSeconds seconds for bn_primes)",
+    "Gate tests: ``$($gateTests -join ', ')``",
+    "The full suite runs only when every gate test passes.",
+    "Per-test timeout: $testTimeoutSeconds seconds ($slowTestTimeoutSeconds seconds for the full suite)",
     "",
     "A zero exit code means that the stage succeeded. Diagnostic failures do not stop subsequent comparisons."
 )
