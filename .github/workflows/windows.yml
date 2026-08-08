@@ -99,7 +99,7 @@ jobs:
 
       - name: "Test"
         shell: cmd
-        run: ctest --test-dir build -C Release --timeout 180 --output-on-failure
+        run: ctest --test-dir build -C Release --timeout 60 --output-on-failure
 
       - name: "Upload build artifacts"
         if: always()
