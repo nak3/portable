@@ -13,11 +13,6 @@
 -static inline int
 +static BN_SELECTED_INLINE int
  bn_ct_ne_zero(BN_ULONG w)
-@@ -218,3 +224,3 @@
- #ifndef HAVE_BN_ADDW_ADDW
--static inline void
-+static BN_SELECTED_INLINE void
- bn_addw_addw(BN_ULONG a, BN_ULONG b, BN_ULONG c, BN_ULONG *out_r1,
 @@ -348,3 +354,3 @@
  #if 1
 -static inline void
