@@ -98,6 +98,8 @@ function Invoke-DiagnosticFullSuite {
         "--output-log", (Join-Path $diagnosticsDir "$safeConfiguration-full.log")
     )
     Add-Result $Configuration "full test suite" $exitCode
+
+    return $exitCode
 }
 
 function Test-Configuration {
@@ -123,7 +125,7 @@ function Test-Configuration {
     $exitCode = Invoke-DiagnosticCommand "$Name configure" "cmake" $configureArguments
     Add-Result $Name "configure" $exitCode
     if ($exitCode -ne 0) {
-        return
+        return $exitCode
     }
 
     $buildArguments = @(
@@ -136,12 +138,14 @@ function Test-Configuration {
     $exitCode = Invoke-DiagnosticCommand "$Name build" "cmake" $buildArguments
     Add-Result $Name "build" $exitCode
     if ($exitCode -ne 0) {
-        return
+        return $exitCode
     }
 
-    if (Invoke-DiagnosticGateTests $Name $BuildDirectory) {
-        Invoke-DiagnosticFullSuite $Name $BuildDirectory
+    if (-not (Invoke-DiagnosticGateTests $Name $BuildDirectory)) {
+        return 1
     }
+
+    return Invoke-DiagnosticFullSuite $Name $BuildDirectory
 }
 
 Write-Diagnostic "Windows ARM64 diagnostics"
@@ -167,7 +171,7 @@ foreach ($compilerFile in $compilerFiles) {
         ForEach-Object { Write-Diagnostic $_.Line }
 }
 
-Test-Configuration `
+$diagnosticExitCode = Test-Configuration `
     -Name "MSVC optimized, mulw no inlining" `
     -BuildDirectory "build-bn-mulw-noinline" `
     -AdditionalCMakeArguments @("-D", "MSVC_ARM64_BN_MULW_NOINLINE=ON") `
@@ -188,7 +192,7 @@ $summary += @(
     "The full suite runs only when every gate test passes.",
     "Per-test timeout: $testTimeoutSeconds seconds ($slowTestTimeoutSeconds seconds for the full suite)",
     "",
-    "A zero exit code means that the stage succeeded. Diagnostic failures do not stop subsequent comparisons."
+    "The diagnostic step fails when configuration, build, gate tests, or the full suite fails."
 )
 
 $summary | Set-Content -Path $summaryPath
@@ -199,5 +203,4 @@ if ($env:GITHUB_STEP_SUMMARY) {
 Write-Diagnostic ""
 Write-Diagnostic ($summary -join [Environment]::NewLine)
 
-# This step is diagnostic only. The regular test step remains authoritative.
-exit 0
+exit $diagnosticExitCode
