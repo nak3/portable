@@ -152,6 +152,9 @@ char buf[1]; getentropy(buf, 1);
 		;;
 esac
 
+AX_CHECK_COMPILE_FLAG([-Wmissing-prototypes],
+	[CFLAGS="$CFLAGS -Wmissing-prototypes"], [], [-Werror])
+
 # Check if time_t is sized correctly
 AC_CHECK_SIZEOF([time_t], [time.h])
 AM_CONDITIONAL([SMALL_TIME_T], [test "$ac_cv_sizeof_time_t" = "4"])

@@ -25,6 +25,7 @@ include(CheckFunctionExists)
 include(CheckSymbolExists)
 include(CheckLibraryExists)
 include(CheckIncludeFiles)
+include(CheckCCompilerFlag)
 include(CheckTypeSize)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}" ${CMAKE_MODULE_PATH})
@@ -156,6 +157,11 @@ set(CMAKE_POSITION_INDEPENDENT_CODE true)
 
 if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
 	add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wno-pointer-sign>)
+endif()
+
+check_c_compiler_flag("-Wmissing-prototypes" HAVE_WMISSING_PROTOTYPES)
+if(HAVE_WMISSING_PROTOTYPES)
+	add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wmissing-prototypes>)
 endif()
 
 if(WIN32)
