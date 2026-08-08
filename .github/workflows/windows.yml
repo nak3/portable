@@ -53,6 +53,7 @@ jobs:
         run: ./update.sh
 
       - name: "Configure CMake"
+        id: cmake
         shell: pwsh
         run: |
           $perl = Join-Path '${{ steps.msys2.outputs.msys2-location }}' 'usr\bin\perl.exe'
@@ -80,11 +81,21 @@ jobs:
             throw "No CMake generator found for Visual Studio $major"
           }
           Write-Host "Using generator: $generator"
+          "generator=$generator" >> $env:GITHUB_OUTPUT
+          "perl=$perl" >> $env:GITHUB_OUTPUT
           cmake -Bbuild -G "$generator" -A ${{ matrix.arch }} -D BUILD_SHARED_LIBS=${{ matrix.shared }} -D CMAKE_INSTALL_PREFIX=../local "-DPERL_EXECUTABLE=$perl"
 
       - name: "Build"
         shell: cmd
         run: cmake --build build --config Release
+
+      - name: "Diagnose ARM64 failures"
+        if: matrix.arch == 'ARM64' && matrix.shared == 'OFF'
+        shell: pwsh
+        run: |
+          ./.github/scripts/windows-arm64-diagnostics.ps1 `
+            -Generator '${{ steps.cmake.outputs.generator }}' `
+            -Perl '${{ steps.cmake.outputs.perl }}'
 
       - name: "Test"
         shell: cmd
@@ -96,3 +107,10 @@ jobs:
         with:
           name: "${{ matrix.os }}-${{ matrix.arch }}${{ matrix.shared == 'ON' && '-shared' || '' }}-build-results"
           path: "build"
+
+      - name: "Upload ARM64 diagnostics"
+        if: always() && matrix.arch == 'ARM64' && matrix.shared == 'OFF'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: "windows-11-arm-diagnostics"
+          path: "arm64-diagnostics"
