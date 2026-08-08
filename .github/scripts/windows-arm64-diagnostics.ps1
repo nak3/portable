@@ -105,7 +105,8 @@ function Test-Configuration {
         [string]$Name,
         [string]$BuildDirectory,
         [string]$Toolset,
-        [string]$ReleaseFlags
+        [string]$ReleaseFlags,
+        [string[]]$AdditionalCMakeArguments
     )
 
     $configureArguments = @(
@@ -122,6 +123,9 @@ function Test-Configuration {
     }
     if ($ReleaseFlags) {
         $configureArguments += @("-D", "CMAKE_C_FLAGS_RELEASE=$ReleaseFlags")
+    }
+    if ($AdditionalCMakeArguments) {
+        $configureArguments += $AdditionalCMakeArguments
     }
     $exitCode = Invoke-DiagnosticCommand "$Name configure" "cmake" $configureArguments
     Add-Result $Name "configure" $exitCode
@@ -167,6 +171,10 @@ foreach ($compilerFile in $compilerFiles) {
 Invoke-DiagnosticTests "MSVC optimized" "build"
 
 Test-Configuration "MSVC no optimization" "build-noopt" "" "/Od /Ob0 /DNDEBUG"
+Test-Configuration `
+    -Name "MSVC optimized, bn_mont no inlining" `
+    -BuildDirectory "build-bn-mont-noinline" `
+    -AdditionalCMakeArguments @("-D", "MSVC_ARM64_BN_MONT_NOINLINE=ON")
 Test-Configuration "ClangCL optimized" "build-clangcl" "ClangCL" ""
 
 $summary = @(

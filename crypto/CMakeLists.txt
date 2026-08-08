@@ -846,6 +846,13 @@ elseif(HOST_X86_64)
 endif()
 
 if(MSVC)
+	if(HOST_AARCH64 AND MSVC_ARM64_BN_MONT_NOINLINE)
+		message(STATUS "Disabling MSVC inlining for ARM64 bn_mont.c")
+		set_source_files_properties(bn/bn_mont.c PROPERTIES
+			COMPILE_OPTIONS /Ob0
+		)
+	endif()
+
 	# "C4701" - Potentially uninitialized local variable 'name' used
 	set_source_files_properties(bn/bn_convert.c pem/pem_lib.c PROPERTIES
 		COMPILE_OPTIONS /wd4701
