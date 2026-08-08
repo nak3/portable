@@ -13,11 +13,6 @@
 -static inline int
 +static BN_SELECTED_INLINE int
  bn_ct_ne_zero(BN_ULONG w)
-@@ -348,3 +354,3 @@
- #if 1
--static inline void
-+static BN_SELECTED_INLINE void
- bn_mulw(BN_ULONG a, BN_ULONG b, BN_ULONG *out_r1, BN_ULONG *out_r0)
 @@ -592,2 +598,3 @@
 -
 +#undef BN_SELECTED_INLINE
