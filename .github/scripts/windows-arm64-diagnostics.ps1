@@ -100,13 +100,31 @@ function Invoke-DiagnosticTests {
     }
 }
 
+function Invoke-DiagnosticFullSuite {
+    param(
+        [string]$Configuration,
+        [string]$BuildDirectory
+    )
+
+    $safeConfiguration = $Configuration -replace "[^A-Za-z0-9_.-]", "-"
+    $exitCode = Invoke-DiagnosticCommand "$Configuration full test suite" "ctest" @(
+        "--test-dir", $BuildDirectory,
+        "-C", "Release",
+        "--timeout", "$slowTestTimeoutSeconds",
+        "--output-on-failure",
+        "--output-log", (Join-Path $diagnosticsDir "$safeConfiguration-full.log")
+    )
+    Add-Result $Configuration "full test suite" $exitCode
+}
+
 function Test-Configuration {
     param(
         [string]$Name,
         [string]$BuildDirectory,
         [string]$Toolset,
         [string]$ReleaseFlags,
-        [string[]]$AdditionalCMakeArguments
+        [string[]]$AdditionalCMakeArguments,
+        [switch]$FullSuite
     )
 
     $configureArguments = @(
@@ -142,7 +160,11 @@ function Test-Configuration {
         return
     }
 
-    Invoke-DiagnosticTests $Name $BuildDirectory
+    if ($FullSuite) {
+        Invoke-DiagnosticFullSuite $Name $BuildDirectory
+    } else {
+        Invoke-DiagnosticTests $Name $BuildDirectory
+    }
 }
 
 Write-Diagnostic "Windows ARM64 diagnostics"
@@ -174,7 +196,8 @@ Test-Configuration "MSVC no optimization" "build-noopt" "" "/Od /Ob0 /DNDEBUG"
 Test-Configuration `
     -Name "MSVC optimized, bn_mont no inlining" `
     -BuildDirectory "build-bn-mont-noinline" `
-    -AdditionalCMakeArguments @("-D", "MSVC_ARM64_BN_MONT_NOINLINE=ON")
+    -AdditionalCMakeArguments @("-D", "MSVC_ARM64_BN_MONT_NOINLINE=ON") `
+    -FullSuite
 Test-Configuration "ClangCL optimized" "build-clangcl" "ClangCL" ""
 
 $summary = @(
