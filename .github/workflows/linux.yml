@@ -89,3 +89,36 @@ jobs:
           LDFLAGS: "-fsanitize=address"
           ENABLE_ASM: "${{ matrix.asm }}"
           CTEST_OUTPUT_ON_FAILURE: 1
+
+  # Test the C implementations for undefined behavior. Assembly code cannot be
+  # instrumented by UBSAN, so disable it here to maximize sanitizer coverage.
+  test-ubsan:
+    name: "${{ matrix.os }} - UBSAN"
+    runs-on: "${{ matrix.os }}"
+    if: ${{ github.repository_owner == 'libressl' || github.event_name != 'schedule' }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-24.04", "ubuntu-24.04-arm"]
+    steps:
+      - name: "Checkout repository"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: "Install test dependencies"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libio-socket-ssl-perl
+          perl -MIO::Socket::SSL::Utils -e 1
+
+      - name: "Run tests"
+        run: ./scripts/test
+        env:
+          ARCH: "native"
+          CC: "clang"
+          CFLAGS: "-O1 -ggdb -fno-omit-frame-pointer -D__STRICT_ALIGNMENT -fsanitize=undefined -fno-sanitize-recover=undefined"
+          LDFLAGS: "-fsanitize=undefined"
+          UBSAN_OPTIONS: "print_stacktrace=1:halt_on_error=1"
+          ENABLE_ASM: "OFF"
+          CTEST_OUTPUT_ON_FAILURE: 1
