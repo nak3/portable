@@ -1,25 +1,23 @@
---- crypto/bn/bn_internal.h.orig	Sat Aug  8 19:05:00 2026
-+++ crypto/bn/bn_internal.h	Sat Aug  8 19:05:00 2026
-@@ -470,7 +470,13 @@ bn_mulw_addw(BN_ULONG a, BN_ULONG b, BN_ULONG c, BN_ULONG *out_r1,
-  * single words, producing a double word result.
+--- crypto/bn/bn_internal.h.orig	Sat Aug  8 20:05:00 2026
++++ crypto/bn/bn_internal.h	Sat Aug  8 20:05:00 2026
+@@ -450,7 +450,13 @@ bn_mulw_hi(BN_ULONG a, BN_ULONG b)
+  * producing a double word result.
   */
- #ifndef HAVE_BN_MULW_ADDW_ADDW
+ #ifndef HAVE_BN_MULW_ADDW
 -static inline void
-+#if defined(LIBRESSL_BN_MULW_ADDW_ADDW_NOINLINE)
-+#define BN_MULW_ADDW_ADDW_INLINE __declspec(noinline)
++#if defined(LIBRESSL_BN_MULW_ADDW_NOINLINE)
++#define BN_MULW_ADDW_INLINE __declspec(noinline)
 +#else
-+#define BN_MULW_ADDW_ADDW_INLINE inline
++#define BN_MULW_ADDW_INLINE inline
 +#endif
 +
-+static BN_MULW_ADDW_ADDW_INLINE void
- bn_mulw_addw_addw(BN_ULONG a, BN_ULONG b, BN_ULONG c, BN_ULONG d,
-     BN_ULONG *out_r1, BN_ULONG *out_r0)
++static BN_MULW_ADDW_INLINE void
+ bn_mulw_addw(BN_ULONG a, BN_ULONG b, BN_ULONG c, BN_ULONG *out_r1,
+     BN_ULONG *out_r0)
  {
-@@ -485,2 +491,5 @@ bn_mulw_addw_addw(BN_ULONG a, BN_ULONG b, BN_ULONG c, BN_ULONG d,
+@@ -465,2 +471,5 @@ bn_mulw_addw(BN_ULONG a, BN_ULONG b, BN_ULONG c, BN_ULONG *out_r1,
  }
 +
-+#undef BN_MULW_ADDW_ADDW_INLINE
++#undef BN_MULW_ADDW_INLINE
 +
  #endif
- 
- /*
