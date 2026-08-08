@@ -100,7 +100,7 @@ TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) $(top_srcdir)/tap-driver.sh
 TESTS =
 XFAIL_TESTS =
 check_PROGRAMS =
-EXTRA_DIST = CMakeLists.txt
+EXTRA_DIST = CMakeLists.txt cmake
 DISTCLEANFILES = pidwraptest.txt
 
 distclean-local:

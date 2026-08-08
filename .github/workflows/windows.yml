@@ -2,20 +2,12 @@
 name: "Windows"
 
 on:
-  push: {}
-  pull_request: {}
-  schedule:
-    - cron: "0 0 * * 0" # At 00:00 weekly on Sunday.
-
-concurrency:
-  group: "${{ github.workflow }}-${{ github.event.number || github.ref }}"
-  cancel-in-progress: true
+  workflow_call:
 
 jobs:
   test:
     name: "${{ matrix.os }}/${{ matrix.arch }} (${{ matrix.shared == 'ON' && 'shared' || 'static' }})"
     runs-on: "${{ matrix.os }}"
-    if: ${{ github.repository_owner == 'libressl' || github.event_name != 'schedule' }}
     permissions:
       contents: read
     strategy:
@@ -25,8 +17,16 @@ jobs:
         arch: ["ARM64", "x64", "Win32"]
         shared: ["ON", "OFF"]
     steps:
-      - name: "Checkout repository"
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: "Download prepared source"
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: "prepared-source"
+
+      - name: "Extract prepared source"
+        shell: bash
+        run: |
+          mkdir source
+          tar -xzf libressl-*.tar.gz -C source --strip-components=1
 
       - name: "Setup MSYS2"
         id: msys2
@@ -40,10 +40,6 @@ jobs:
             patch
             perl
             perl-IO-Socket-SSL
-
-      - name: "Update"
-        shell: msys2 {0}
-        run: ./update.sh
 
       - name: "Configure CMake"
         shell: pwsh
@@ -61,7 +57,7 @@ jobs:
             throw "No Visual Studio CMake generator found"
           }
           Write-Host "Using generator: $generator"
-          cmake -Bbuild -G "$generator" -A ${{ matrix.arch }} -D BUILD_SHARED_LIBS=${{ matrix.shared }} -D CMAKE_INSTALL_PREFIX=../local "-DPERL_EXECUTABLE=$perl"
+          cmake -S source -B build -G "$generator" -A ${{ matrix.arch }} -D BUILD_SHARED_LIBS=${{ matrix.shared }} -D CMAKE_INSTALL_PREFIX=../local "-DPERL_EXECUTABLE=$perl"
 
       - name: "Build"
         shell: cmd

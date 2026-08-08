@@ -2,12 +2,7 @@
 name: "CMake Check"
 
 on:
-  push: {}
-  pull_request: {}
-
-concurrency:
-  group: "${{ github.workflow }}-${{ github.event.number || github.ref }}"
-  cancel-in-progress: true
+  workflow_call:
 
 jobs:
   check:
@@ -23,8 +18,15 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: "Checkout repository"
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: "Download prepared source"
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: "prepared-source"
+
+      - name: "Extract prepared source"
+        run: |
+          mkdir source
+          tar -xzf libressl-*.tar.gz -C source --strip-components=1
 
       - name: "Setup Windows dependencies"
         if: runner.os == 'Windows'
@@ -45,18 +47,9 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install automake libtool
 
-      - name: "Prepare source tree for build (Windows)"
-        if: runner.os == 'Windows'
-        shell: "msys2 {0}"
-        run: ./autogen.sh
-
-      - name: "Prepare source tree for build (Unix)"
-        if: runner.os != 'Windows'
-        run: ./autogen.sh
-
       - name: "Configure"
         run: |
-          cmake -S . \
+          cmake -S source \
             -B build \
             -D CMAKE_BUILD_TYPE=Release \
             -D CMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/../local
@@ -69,7 +62,7 @@ jobs:
 
       - name: "Consume from the build directory - Configure"
         run: |
-          cmake -S tests/cmake \
+          cmake -S source/tests/cmake \
             -B consumer-build \
             -D CMAKE_BUILD_TYPE=Release \
             -D LibreSSL_DIR=$GITHUB_WORKSPACE/build
@@ -79,7 +72,7 @@ jobs:
 
       - name: "Consume from the install directory (CMAKE_PREFIX_PATH) - Configure"
         run: |
-          cmake -S tests/cmake \
+          cmake -S source/tests/cmake \
             -B consumer-install-prefix \
             -D CMAKE_BUILD_TYPE=Release \
             -D CMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/../local
@@ -89,7 +82,7 @@ jobs:
 
       - name: "Consume from the install directory (LibreSSL_DIR) - Configure"
         run: |
-          cmake -S tests/cmake \
+          cmake -S source/tests/cmake \
             -B consumer-install-dir \
             -D CMAKE_BUILD_TYPE=Release \
             -D LibreSSL_DIR=$GITHUB_WORKSPACE/../local/lib/cmake/LibreSSL

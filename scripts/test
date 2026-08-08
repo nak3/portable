@@ -46,8 +46,10 @@ if type apt-get >/dev/null 2>&1; then
 	sudo apt-get install -y cmake ninja-build
 fi
 
-# generate source tree
-./autogen.sh
+# Generate the source tree unless CI supplied a prepared distribution.
+if [ "$PREPARED_SOURCE" != "1" ]; then
+	./autogen.sh
+fi
 
 VERSION=`cat VERSION`
 
