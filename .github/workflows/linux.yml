@@ -85,7 +85,8 @@ jobs:
         env:
           ARCH: "native"
           CC: "clang"
-          CFLAGS: "-ggdb -fsanitize=address"
-          LDFLAGS: "-fsanitize=address"
+          CFLAGS: "-ggdb -D__STRICT_ALIGNMENT -DOPENSSL_NO_INLINE_ASM -fsanitize=address,undefined -fno-sanitize=function"
+          LDFLAGS: "-fsanitize=address,undefined"
+          UBSAN_OPTIONS: "print_stacktrace=1:halt_on_error=1"
           ENABLE_ASM: "${{ matrix.asm }}"
           CTEST_OUTPUT_ON_FAILURE: 1
