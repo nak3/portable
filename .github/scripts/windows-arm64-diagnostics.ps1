@@ -14,7 +14,10 @@ $logPath = Join-Path $diagnosticsDir "diagnostics.log"
 $summaryPath = Join-Path $diagnosticsDir "summary.md"
 $targetTests = @(
     "bn_test",
-    "cms_test",
+    "bn_mod_exp",
+    "bn_mod_sqrt",
+    "bn_primes",
+    "cmstest",
     "cttest",
     "ecc_cdh",
     "ec_asn1_test",
@@ -25,7 +28,8 @@ $targetTests = @(
     "pkcs7test",
     "policy",
     "renegotiation_test",
-    "rsa_method_test"
+    "rsa_method_test",
+    "rsa_test"
 )
 $testTimeoutSeconds = 60
 $results = [System.Collections.Generic.List[object]]::new()
