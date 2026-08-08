@@ -172,7 +172,7 @@ foreach ($compilerFile in $compilerFiles) {
 }
 
 $diagnosticExitCode = Test-Configuration `
-    -Name "MSVC optimized, inline ARM64 BN helpers" `
+    -Name "MSVC optimized, ARM64 CLZ and multiply intrinsics" `
     -BuildDirectory "build-bn-inline-helpers" `
     -VerboseBuild
 
