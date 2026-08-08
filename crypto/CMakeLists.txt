@@ -852,10 +852,10 @@ if(MSVC)
 			COMPILE_OPTIONS /Ob0
 		)
 	endif()
-	if(HOST_AARCH64 AND MSVC_ARM64_BN_WORD_ARITHMETIC_NOINLINE)
-		message(STATUS "Disabling MSVC inlining for the BN word arithmetic chain")
+	if(HOST_AARCH64 AND MSVC_ARM64_BN_MONT_ARITHMETIC_NOINLINE)
+		message(STATUS "Disabling MSVC inlining for Montgomery word arithmetic")
 		set_source_files_properties(bn/bn_mont.c PROPERTIES
-			COMPILE_DEFINITIONS LIBRESSL_BN_WORD_ARITHMETIC_NOINLINE
+			COMPILE_DEFINITIONS LIBRESSL_BN_MONT_ARITHMETIC_NOINLINE
 		)
 	endif()
 

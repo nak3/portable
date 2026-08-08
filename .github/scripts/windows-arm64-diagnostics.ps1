@@ -172,9 +172,9 @@ foreach ($compilerFile in $compilerFiles) {
 }
 
 $diagnosticExitCode = Test-Configuration `
-    -Name "MSVC optimized, BN word arithmetic chain no inlining" `
-    -BuildDirectory "build-bn-word-arithmetic-noinline" `
-    -AdditionalCMakeArguments @("-D", "MSVC_ARM64_BN_WORD_ARITHMETIC_NOINLINE=ON") `
+    -Name "MSVC optimized, Montgomery word arithmetic no inlining" `
+    -BuildDirectory "build-bn-mont-arithmetic-noinline" `
+    -AdditionalCMakeArguments @("-D", "MSVC_ARM64_BN_MONT_ARITHMETIC_NOINLINE=ON") `
     -VerboseBuild
 
 $summary = @(
