@@ -113,12 +113,40 @@ jobs:
           perl -MIO::Socket::SSL::Utils -e 1
 
       - name: "Run tests"
-        run: ./scripts/test
+        shell: bash
+        run: |
+          test_status=0
+          ./scripts/test || test_status=$?
+
+          if ((test_status != 0)); then
+            while IFS= read -r -d '' log; do
+              cat "$log"
+            done < <(find . -type f -name test-suite.log -print0)
+          fi
+
+          shopt -s nullglob
+          ubsan_logs=("$GITHUB_WORKSPACE"/ubsan.*)
+          if ((${#ubsan_logs[@]} > 0)); then
+            echo "::group::UndefinedBehaviorSanitizer reports"
+            cat "${ubsan_logs[@]}"
+            echo "::endgroup::"
+            exit 1
+          fi
+
+          exit "$test_status"
         env:
           ARCH: "native"
           CC: "clang"
-          CFLAGS: "-O1 -ggdb -fno-omit-frame-pointer -D__STRICT_ALIGNMENT -fsanitize=undefined -fno-sanitize-recover=undefined"
+          CFLAGS: "-O1 -ggdb -fno-omit-frame-pointer -D__STRICT_ALIGNMENT -fsanitize=undefined"
           LDFLAGS: "-fsanitize=undefined"
-          UBSAN_OPTIONS: "print_stacktrace=1:halt_on_error=1"
+          UBSAN_OPTIONS: "print_stacktrace=1:halt_on_error=0:log_path=${{ github.workspace }}/ubsan"
           ENABLE_ASM: "OFF"
           CTEST_OUTPUT_ON_FAILURE: 1
+
+      - name: "Upload UBSAN reports"
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: "ubsan-${{ matrix.os }}"
+          path: "ubsan.*"
+          if-no-files-found: ignore
