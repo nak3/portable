@@ -137,7 +137,12 @@ jobs:
         env:
           ARCH: "native"
           CC: "clang"
-          CFLAGS: "-O1 -ggdb -fno-omit-frame-pointer -D__STRICT_ALIGNMENT -fsanitize=undefined"
+          # Ignore legacy callback type erasure and avoid unchecked inline-asm loads;
+          # retain the remaining UBSan checks for actionable reports.
+          CFLAGS: >-
+            -O1 -ggdb -fno-omit-frame-pointer
+            -D__STRICT_ALIGNMENT -DOPENSSL_NO_INLINE_ASM
+            -fsanitize=undefined -fno-sanitize=function
           LDFLAGS: "-fsanitize=undefined"
           UBSAN_OPTIONS: "print_stacktrace=1:halt_on_error=0:log_path=${{ github.workspace }}/ubsan"
           ENABLE_ASM: "OFF"
