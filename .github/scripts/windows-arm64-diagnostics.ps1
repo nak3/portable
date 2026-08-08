@@ -32,6 +32,7 @@ $targetTests = @(
     "rsa_test"
 )
 $testTimeoutSeconds = 60
+$slowTestTimeoutSeconds = 180
 $results = [System.Collections.Generic.List[object]]::new()
 
 function Write-Diagnostic {
@@ -82,11 +83,16 @@ function Invoke-DiagnosticTests {
     foreach ($testName in $targetTests) {
         $safeConfiguration = $Configuration -replace "[^A-Za-z0-9_.-]", "-"
         $safeTestName = $testName -replace "[^A-Za-z0-9_.-]", "-"
+        $timeoutSeconds = if ($testName -eq "bn_primes") {
+            $slowTestTimeoutSeconds
+        } else {
+            $testTimeoutSeconds
+        }
         $exitCode = Invoke-DiagnosticCommand "$Configuration test: $testName" "ctest" @(
             "--test-dir", $BuildDirectory,
             "-C", "Release",
             "-R", "^$([regex]::Escape($testName))$",
-            "--timeout", "$testTimeoutSeconds",
+            "--timeout", "$timeoutSeconds",
             "--output-on-failure",
             "--output-log", (Join-Path $diagnosticsDir "$safeConfiguration-$safeTestName.log")
         )
@@ -99,7 +105,8 @@ function Test-Configuration {
         [string]$Name,
         [string]$BuildDirectory,
         [string]$Toolset,
-        [string]$ReleaseFlags
+        [string]$ReleaseFlags,
+        [string[]]$AdditionalCMakeArguments
     )
 
     $configureArguments = @(
@@ -116,6 +123,9 @@ function Test-Configuration {
     }
     if ($ReleaseFlags) {
         $configureArguments += @("-D", "CMAKE_C_FLAGS_RELEASE=$ReleaseFlags")
+    }
+    if ($AdditionalCMakeArguments) {
+        $configureArguments += $AdditionalCMakeArguments
     }
 
     $exitCode = Invoke-DiagnosticCommand "$Name configure" "cmake" $configureArguments
@@ -162,6 +172,10 @@ foreach ($compilerFile in $compilerFiles) {
 Invoke-DiagnosticTests "MSVC optimized" "build"
 
 Test-Configuration "MSVC no optimization" "build-noopt" "" "/Od /Ob0 /DNDEBUG"
+Test-Configuration `
+    -Name "MSVC optimized, bn_mont no optimization" `
+    -BuildDirectory "build-bn-mont-noopt" `
+    -AdditionalCMakeArguments @("-D", "MSVC_ARM64_BN_MONT_NOOPT=ON")
 Test-Configuration "ClangCL optimized" "build-clangcl" "ClangCL" ""
 
 $summary = @(
@@ -176,7 +190,7 @@ foreach ($result in $results) {
 $summary += @(
     "",
     "Targeted tests: ``$($targetTests -join ', ')``",
-    "Per-test timeout: $testTimeoutSeconds seconds",
+    "Per-test timeout: $testTimeoutSeconds seconds ($slowTestTimeoutSeconds seconds for bn_primes)",
     "",
     "A zero exit code means that the stage succeeded. Diagnostic failures do not stop subsequent comparisons."
 )
