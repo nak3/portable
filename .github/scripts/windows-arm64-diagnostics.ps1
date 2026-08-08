@@ -172,9 +172,8 @@ foreach ($compilerFile in $compilerFiles) {
 }
 
 $diagnosticExitCode = Test-Configuration `
-    -Name "MSVC optimized, ct_ne_zero no inlining + mulw intrinsic" `
-    -BuildDirectory "build-bn-selected-noinline" `
-    -AdditionalCMakeArguments @("-D", "MSVC_ARM64_BN_SELECTED_NOINLINE=ON") `
+    -Name "MSVC optimized, inline ARM64 BN helpers" `
+    -BuildDirectory "build-bn-inline-helpers" `
     -VerboseBuild
 
 $summary = @(
