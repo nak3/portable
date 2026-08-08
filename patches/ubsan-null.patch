@@ -1,0 +1,69 @@
+--- crypto/asn1/a_object.c.orig	Fri Aug  8 12:30:00 2026
++++ crypto/asn1/a_object.c	Fri Aug  8 12:30:00 2026
+@@ -448,7 +448,10 @@ i2t_ASN1_OBJECT_internal(const ASN1_OBJECT *aobj, char
+ 	if (!CBB_finish(&cbb, &data, &data_len))
+ 		goto err;
+ 
+-	ret = strlcpy(buf, data, buf_len);
++	if (buf_len == 0)
++		ret = (int)data_len - 1;
++	else
++		ret = strlcpy(buf, data, buf_len);
+  err:
+ 	CBB_cleanup(&cbb);
+ 	free(data);
+--- crypto/bn/bn_add.c.orig	Fri Aug  8 12:30:00 2026
++++ crypto/bn/bn_add.c	Fri Aug  8 12:30:00 2026
+@@ -86,9 +86,11 @@ bn_add(BN_ULONG *r, int r_len, const BN_ULONG *a, int
+ 
+ 	carry = bn_add_words(r, a, b, min_len);
+ 
+-	a += min_len;
+-	b += min_len;
+-	r += min_len;
++	if (min_len > 0) {
++		a += min_len;
++		b += min_len;
++		r += min_len;
++	}
+ 
+ 	/* XXX - consider doing four at a time to match bn_add_words(). */
+ 	while (diff_len < 0) {
+@@ -133,9 +135,11 @@ bn_sub(BN_ULONG *r, int r_len, const BN_ULONG *a, int
+ 
+ 	borrow = bn_sub_words(r, a, b, min_len);
+ 
+-	a += min_len;
+-	b += min_len;
+-	r += min_len;
++	if (min_len > 0) {
++		a += min_len;
++		b += min_len;
++		r += min_len;
++	}
+ 
+ 	/* XXX - consider doing four at a time to match bn_sub_words. */
+ 	while (diff_len < 0) {
+--- crypto/bn/bn_convert.c.orig	Fri Aug  8 12:30:00 2026
++++ crypto/bn/bn_convert.c	Fri Aug  8 12:30:00 2026
+@@ -101,7 +101,8 @@ bn_bn2binpad_internal(const BIGNUM *bn, uint8_t *out,
+ 		return -1;
+ 
+ 	if (bn->dmax == 0) {
+-		explicit_bzero(out, out_len);
++		if (out_len > 0)
++			explicit_bzero(out, out_len);
+ 		return out_len;
+ 	}
+ 
+--- tests/bn_convert.c.orig	Fri Aug  8 12:30:00 2026
++++ tests/bn_convert.c	Fri Aug  8 12:30:00 2026
+@@ -62,7 +62,7 @@ check_bin_output(size_t test_no, const char *label, co
+ 		    "want %d\n", test_no, label, ret, out_len);
+ 		goto failure;
+ 	}
+-	if (memcmp(out, bin, bin_len) != 0) {
++	if (bin_len > 0 && memcmp(out, bin, bin_len) != 0) {
+ 		fprintf(stderr, "FAIL: Test %zu %s - output from "
+ 		    "BN_bn2bin() differs\n", test_no, label);
+ 		fprintf(stderr, "Got:\n");
