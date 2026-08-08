@@ -66,8 +66,8 @@ option(ENABLE_EXTRATESTS "Enable extra tests that may be unreliable on some plat
 option(ENABLE_NC "Enable installing TLS-enabled nc(1)" OFF)
 option(MSVC_ARM64_BN_MONT_NOINLINE
 	"Disable inlining for bn_mont.c when building ARM64 with MSVC" OFF)
-option(MSVC_ARM64_BN_ADDW_NOINLINE
-	"Do not inline bn_addw() with MSVC ARM64" OFF)
+option(MSVC_ARM64_BN_PRIMITIVES_NOINLINE
+	"Do not inline Montgomery arithmetic primitives with MSVC ARM64" OFF)
 set(OPENSSLDIR ${OPENSSLDIR} CACHE PATH "Set the default openssl directory" FORCE)
 set(TLS_DEFAULT_CA_FILE ${TLS_DEFAULT_CA_FILE} CACHE PATH "Set the default CA file for libtls" FORCE)
 set(LIBRESSL_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/LibreSSL" CACHE STRING "Installation directory for the CMake targets")
