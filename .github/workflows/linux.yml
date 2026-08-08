@@ -142,8 +142,8 @@ jobs:
           CFLAGS: >-
             -O1 -ggdb -fno-omit-frame-pointer
             -D__STRICT_ALIGNMENT -DOPENSSL_NO_INLINE_ASM
-            -fsanitize=undefined -fno-sanitize=function
-          LDFLAGS: "-fsanitize=undefined"
+            -fsanitize=address,undefined -fno-sanitize=function
+          LDFLAGS: "-fsanitize=address,undefined"
           UBSAN_OPTIONS: "print_stacktrace=1:halt_on_error=0:log_path=${{ github.workspace }}/ubsan"
           ENABLE_ASM: "OFF"
           CTEST_OUTPUT_ON_FAILURE: 1
