@@ -124,6 +124,8 @@ function Test-Configuration {
         [string]$Toolset,
         [string]$ReleaseFlags,
         [string[]]$AdditionalCMakeArguments,
+        [ValidateSet("ON", "OFF")]
+        [string]$Shared = "OFF",
         [switch]$FullSuite,
         [switch]$VerboseBuild
     )
@@ -133,7 +135,7 @@ function Test-Configuration {
         "-B", $BuildDirectory,
         "-G", $Generator,
         "-A", "ARM64",
-        "-D", "BUILD_SHARED_LIBS=OFF",
+        "-D", "BUILD_SHARED_LIBS=$Shared",
         "-D", "CMAKE_INSTALL_PREFIX=../local",
         "-D", "PERL_EXECUTABLE=$Perl"
     )
@@ -201,6 +203,12 @@ Test-Configuration "MSVC no optimization" "build-noopt" "" "/Od /Ob0 /DNDEBUG"
 Test-Configuration `
     -Name "MSVC optimized, bn_mont no inlining" `
     -BuildDirectory "build-bn-mont-noinline" `
+    -AdditionalCMakeArguments @("-D", "MSVC_ARM64_BN_MONT_NOINLINE=ON") `
+    -FullSuite
+Test-Configuration `
+    -Name "MSVC shared, bn_mont no inlining" `
+    -BuildDirectory "build-shared-bn-mont-noinline" `
+    -Shared "ON" `
     -AdditionalCMakeArguments @("-D", "MSVC_ARM64_BN_MONT_NOINLINE=ON") `
     -FullSuite
 Test-Configuration `
