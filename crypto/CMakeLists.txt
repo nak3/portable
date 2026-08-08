@@ -852,10 +852,10 @@ if(MSVC)
 			COMPILE_OPTIONS /Ob0
 		)
 	endif()
-	if(HOST_AARCH64 AND MSVC_ARM64_BN_CT_WORD_ARITHMETIC_NOINLINE)
-		message(STATUS "Disabling MSVC inlining for BN constant-time and word arithmetic helpers")
+	if(HOST_AARCH64 AND MSVC_ARM64_BN_CT_BASIC_ARITHMETIC_NOINLINE)
+		message(STATUS "Disabling MSVC inlining for BN constant-time and basic arithmetic helpers")
 		set_source_files_properties(bn/bn_mont.c PROPERTIES
-			COMPILE_DEFINITIONS LIBRESSL_BN_CT_WORD_ARITHMETIC_NOINLINE
+			COMPILE_DEFINITIONS LIBRESSL_BN_CT_BASIC_ARITHMETIC_NOINLINE
 		)
 	endif()
 

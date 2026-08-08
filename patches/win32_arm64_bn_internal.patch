@@ -3,43 +3,33 @@
 @@ -53,4 +53,10 @@
 -
 +
-+#if defined(LIBRESSL_BN_CT_WORD_ARITHMETIC_NOINLINE)
-+#define BN_CT_WORD_ARITHMETIC_INLINE __declspec(noinline)
++#if defined(LIBRESSL_BN_CT_BASIC_ARITHMETIC_NOINLINE)
++#define BN_CT_BASIC_ARITHMETIC_INLINE __declspec(noinline)
 +#else
-+#define BN_CT_WORD_ARITHMETIC_INLINE inline
++#define BN_CT_BASIC_ARITHMETIC_INLINE inline
 +#endif
 +
  #ifndef HAVE_BN_CT_NE_ZERO
 -static inline int
-+static BN_CT_WORD_ARITHMETIC_INLINE int
++static BN_CT_BASIC_ARITHMETIC_INLINE int
  bn_ct_ne_zero(BN_ULONG w)
 @@ -198,3 +204,3 @@
  #ifndef HAVE_BN_ADDW
 -static inline void
-+static BN_CT_WORD_ARITHMETIC_INLINE void
++static BN_CT_BASIC_ARITHMETIC_INLINE void
  bn_addw(BN_ULONG a, BN_ULONG b, BN_ULONG *out_r1, BN_ULONG *out_r0)
 @@ -218,3 +224,3 @@
  #ifndef HAVE_BN_ADDW_ADDW
 -static inline void
-+static BN_CT_WORD_ARITHMETIC_INLINE void
++static BN_CT_BASIC_ARITHMETIC_INLINE void
  bn_addw_addw(BN_ULONG a, BN_ULONG b, BN_ULONG c, BN_ULONG *out_r1,
 @@ -348,3 +354,3 @@
  #if 1
 -static inline void
-+static BN_CT_WORD_ARITHMETIC_INLINE void
++static BN_CT_BASIC_ARITHMETIC_INLINE void
  bn_mulw(BN_ULONG a, BN_ULONG b, BN_ULONG *out_r1, BN_ULONG *out_r0)
-@@ -452,3 +458,3 @@
- #ifndef HAVE_BN_MULW_ADDW
--static inline void
-+static BN_CT_WORD_ARITHMETIC_INLINE void
- bn_mulw_addw(BN_ULONG a, BN_ULONG b, BN_ULONG c, BN_ULONG *out_r1,
-@@ -472,3 +478,3 @@
- #ifndef HAVE_BN_MULW_ADDW_ADDW
--static inline void
-+static BN_CT_WORD_ARITHMETIC_INLINE void
- bn_mulw_addw_addw(BN_ULONG a, BN_ULONG b, BN_ULONG c, BN_ULONG d,
 @@ -592,2 +598,3 @@
 -
-+#undef BN_CT_WORD_ARITHMETIC_INLINE
++#undef BN_CT_BASIC_ARITHMETIC_INLINE
 +
  #endif
