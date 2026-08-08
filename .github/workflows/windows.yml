@@ -89,16 +89,7 @@ jobs:
         shell: cmd
         run: cmake --build build --config Release
 
-      - name: "Diagnose ARM64 failures"
-        if: matrix.arch == 'ARM64' && matrix.shared == 'OFF'
-        shell: pwsh
-        run: |
-          ./.github/scripts/windows-arm64-diagnostics.ps1 `
-            -Generator '${{ steps.cmake.outputs.generator }}' `
-            -Perl '${{ steps.cmake.outputs.perl }}'
-
       - name: "Test"
-        if: matrix.arch != 'ARM64'
         shell: cmd
         run: ctest --test-dir build -C Release --timeout 60 --output-on-failure
 
@@ -108,10 +99,3 @@ jobs:
         with:
           name: "${{ matrix.os }}-${{ matrix.arch }}${{ matrix.shared == 'ON' && '-shared' || '' }}-build-results"
           path: "build"
-
-      - name: "Upload ARM64 diagnostics"
-        if: always() && matrix.arch == 'ARM64' && matrix.shared == 'OFF'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: "windows-11-arm-diagnostics"
-          path: "arm64-diagnostics"
