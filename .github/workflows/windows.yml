@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   test:
-    name: "${{ matrix.os }}/${{ matrix.arch }} (${{ matrix.generator }}${{ matrix.shared == 'ON' && ', shared' || '' }})"
+    name: "${{ matrix.os }}/${{ matrix.arch }} (${{ matrix.shared == 'ON' && 'shared' || 'static' }})"
     runs-on: "${{ matrix.os }}"
     if: ${{ github.repository_owner == 'libressl' || github.event_name != 'schedule' }}
     permissions:
@@ -22,19 +22,21 @@ jobs:
       fail-fast: false
       matrix:
         os: ["windows-2022", "windows-2025"]
-        arch: ["ARM64", "x64", "Win32"]
+        arch: ["x64", "Win32"]
         shared: ["ON", "OFF"]
         include:
-          - os: "windows-2022"
-            generator: "Visual Studio 17 2022"
-          - os: "windows-2025"
-            # XXX - use appropriate value
-            generator: "Visual Studio 17 2022"
+          - os: "windows-11-arm"
+            arch: "ARM64"
+            shared: "ON"
+          - os: "windows-11-arm"
+            arch: "ARM64"
+            shared: "OFF"
     steps:
       - name: "Checkout repository"
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: "Setup MSYS2"
+        id: msys2
         uses: msys2/setup-msys2@e9898307ac31d1a803454791be09ab9973336e1c # v2.31.1
         with:
           update: true
@@ -44,21 +46,47 @@ jobs:
             git
             patch
             perl
+            perl-IO-Socket-SSL
 
       - name: "Update"
         shell: msys2 {0}
         run: ./update.sh
 
       - name: "Configure CMake"
-        shell: cmd
-        run: cmake -Bbuild -G "${{ matrix.generator }}" -A ${{ matrix.arch }} -D BUILD_SHARED_LIBS=${{ matrix.shared }} -D CMAKE_INSTALL_PREFIX=../local
+        shell: pwsh
+        run: |
+          $perl = Join-Path '${{ steps.msys2.outputs.msys2-location }}' 'usr\bin\perl.exe'
+          & $perl -MIO::Socket::SSL::Utils -e 1
+          if ($LASTEXITCODE -ne 0) {
+            throw "IO::Socket::SSL::Utils is unavailable"
+          }
+
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+          $component = if ('${{ matrix.arch }}' -eq 'ARM64') {
+            'Microsoft.VisualStudio.Component.VC.Tools.ARM64'
+          } else {
+            'Microsoft.VisualStudio.Component.VC.Tools.x86.x64'
+          }
+          $version = & $vswhere -latest -products * -requires $component -property installationVersion
+          if (-not $version) {
+            throw "No Visual Studio installation with $component found"
+          }
+          $major = $version.Split('.')[0]
+          $generator = cmake --help |
+            Select-String "^\s*\*?\s*(Visual Studio $major \d+)" |
+            Select-Object -First 1 |
+            ForEach-Object { $_.Matches[0].Groups[1].Value }
+          if (-not $generator) {
+            throw "No CMake generator found for Visual Studio $major"
+          }
+          Write-Host "Using generator: $generator"
+          cmake -Bbuild -G "$generator" -A ${{ matrix.arch }} -D BUILD_SHARED_LIBS=${{ matrix.shared }} -D CMAKE_INSTALL_PREFIX=../local "-DPERL_EXECUTABLE=$perl"
 
       - name: "Build"
         shell: cmd
         run: cmake --build build --config Release
 
       - name: "Test"
-        if: matrix.arch != 'ARM64'
         shell: cmd
         run: ctest --test-dir build -C Release --output-on-failure
 
