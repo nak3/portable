@@ -41,6 +41,9 @@ jobs:
           - os: "ubuntu-24.04-arm"
             arch: "native"
             compiler: "clang"
+          - os: "ubuntu-24.04-riscv"
+            arch: "native"
+            compiler: "gcc"
 
     steps:
       - name: "Checkout repository"
