@@ -25,7 +25,7 @@ jobs:
     timeout-minutes: 30
     env:
       BASE_REPOSITORY: "${{ github.event.pull_request.base.repo.full_name || github.repository }}"
-      BASE_REF: "${{ github.event.pull_request.base.sha || inputs.base_ref }}"
+      BASE_REF: "${{ github.event.pull_request.base.sha || inputs.base_ref || github.event.repository.default_branch }}"
       HEAD_REPOSITORY: "${{ github.event.pull_request.head.repo.full_name || github.repository }}"
       HEAD_REF: "${{ github.event.pull_request.head.sha || github.sha }}"
       REPETITIONS: 3
@@ -48,6 +48,17 @@ jobs:
           path: "head"
           persist-credentials: false
 
+      # portable's generated sources are intentionally not committed. Check out
+      # OpenBSD once so both revisions are generated from the exact same input.
+      - name: "Checkout OpenBSD source"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: "libressl/openbsd"
+          ref: "master"
+          fetch-depth: 8
+          path: "openbsd"
+          persist-credentials: false
+
       - name: "Install build dependencies"
         run: |
           sudo apt-get update
@@ -59,12 +70,31 @@ jobs:
           {
             echo "base: $BASE_REPOSITORY@$BASE_REF"
             echo "head: $HEAD_REPOSITORY@$HEAD_REF"
+            echo "openbsd: $(git -C openbsd rev-parse HEAD)"
             uname -a
             cmake --version
             ninja --version
             cc --version
             lscpu
           } > results/environment.txt
+
+      - name: "Generate source trees"
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # update.sh expects a local master branch and fetches from origin.
+          # Point each copy at this checkout to prevent upstream from changing
+          # between generation of the base and head trees.
+          git -C openbsd branch --force --track master origin/master
+          for revision in base head; do
+            cp -a openbsd "$revision/openbsd"
+            git -C "$revision/openbsd" remote set-url origin "$GITHUB_WORKSPACE/openbsd"
+            (
+              cd "$revision"
+              ./update.sh
+            )
+          done
 
       - name: "Build base"
         run: |
