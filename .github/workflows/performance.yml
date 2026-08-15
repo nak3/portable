@@ -1,55 +1,41 @@
-name: "Performance"
+name: "Daily performance report"
 
 on:
   push: {}
-  pull_request: {}
-  workflow_dispatch:
-    inputs:
-      base_ref:
-        description: "Git ref to use as the baseline"
-        required: true
-        default: "master"
-        type: string
+  schedule:
+    - cron: "0 0 * * *" # Daily at 00:00 UTC.
+  workflow_dispatch: {}
 
 concurrency:
-  group: "${{ github.workflow }}-${{ github.event.number || github.ref }}"
+  group: "${{ github.workflow }}-${{ github.ref }}"
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  compare:
-    name: "Compare base and head"
-    runs-on: "ubuntu-24.04"
+  benchmark:
+    name: "${{ matrix.arch }} performance"
+    runs-on: "${{ matrix.os }}"
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: "x86_64"
+            os: "ubuntu-24.04"
+          - arch: "arm64"
+            os: "ubuntu-24.04-arm"
     env:
-      BASE_REPOSITORY: "${{ github.event.pull_request.base.repo.full_name || github.repository }}"
-      BASE_REF: "${{ github.event.pull_request.base.sha || inputs.base_ref || github.event.repository.default_branch }}"
-      HEAD_REPOSITORY: "${{ github.event.pull_request.head.repo.full_name || github.repository }}"
-      HEAD_REF: "${{ github.event.pull_request.head.sha || github.sha }}"
       REPETITIONS: 3
-      WARNING_THRESHOLD: 10
 
     steps:
-      - name: "Checkout base"
+      - name: "Checkout portable"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: "${{ env.BASE_REPOSITORY }}"
-          ref: "${{ env.BASE_REF }}"
-          path: "base"
           persist-credentials: false
 
-      - name: "Checkout head"
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: "${{ env.HEAD_REPOSITORY }}"
-          ref: "${{ env.HEAD_REF }}"
-          path: "head"
-          persist-credentials: false
-
-      # portable's generated sources are intentionally not committed. Check out
-      # OpenBSD once so both revisions are generated from the exact same input.
+      # Generated sources are intentionally not committed to portable.
       - name: "Checkout OpenBSD source"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -64,57 +50,32 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build
 
+      - name: "Generate source tree"
+        run: ./update.sh
+
       - name: "Record environment"
         run: |
           mkdir results
           {
-            echo "base: $BASE_REPOSITORY@$BASE_REF"
-            echo "head: $HEAD_REPOSITORY@$HEAD_REF"
+            echo "portable: $(git rev-parse HEAD)"
             echo "openbsd: $(git -C openbsd rev-parse HEAD)"
+            echo "runner: $RUNNER_NAME"
             uname -a
             cmake --version
             ninja --version
-            cc --version
+            gcc --version
             lscpu
           } > results/environment.txt
 
-      - name: "Generate source trees"
-        shell: bash
+      - name: "Build LibreSSL"
         run: |
-          set -euo pipefail
-
-          # update.sh expects a local master branch and fetches from origin.
-          # Point each copy at this checkout to prevent upstream from changing
-          # between generation of the base and head trees.
-          git -C openbsd branch --force --track master origin/master
-          for revision in base head; do
-            cp -a openbsd "$revision/openbsd"
-            git -C "$revision/openbsd" remote set-url origin "$GITHUB_WORKSPACE/openbsd"
-            (
-              cd "$revision"
-              ./update.sh
-            )
-          done
-
-      - name: "Build base"
-        run: |
-          cmake -S base -B base/build -GNinja \
+          cmake -S . -B build-performance -GNinja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_C_COMPILER=gcc \
             -DENABLE_ASM=ON \
             -DLIBRESSL_APPS=ON \
             -DLIBRESSL_TESTS=OFF
-          cmake --build base/build --target openssl --parallel 4
-
-      - name: "Build head"
-        run: |
-          cmake -S head -B head/build -GNinja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_C_COMPILER=gcc \
-            -DENABLE_ASM=ON \
-            -DLIBRESSL_APPS=ON \
-            -DLIBRESSL_TESTS=OFF
-          cmake --build head/build --target openssl --parallel 4
+          cmake --build build-performance --target openssl --parallel 4
 
       - name: "Run benchmarks"
         shell: bash
@@ -131,37 +92,35 @@ jobs:
             mlkem768
           )
 
-          run_benchmark() {
-            local revision=$1
-            local round=$2
-            "${revision}/build/apps/openssl/openssl" speed -mr "${benchmarks[@]}" \
-              > "results/${revision}-${round}.txt" 2>&1
-          }
-
           for ((round = 1; round <= REPETITIONS; round++)); do
-            if ((round % 2 == 1)); then
-              run_benchmark base "$round"
-              run_benchmark head "$round"
-            else
-              run_benchmark head "$round"
-              run_benchmark base "$round"
-            fi
+            build-performance/apps/openssl/openssl speed -mr "${benchmarks[@]}" \
+              > "results/run-${round}.txt" 2>&1
           done
 
-      - name: "Compare results"
+      - name: "Write performance report"
+        shell: bash
         run: |
-          python3 head/.github/scripts/compare-speed.py \
-            --base 'results/base-*.txt' \
-            --head 'results/head-*.txt' \
-            --warning-threshold "$WARNING_THRESHOLD" \
-            --output results/comparison.md
-          cat results/comparison.md >> "$GITHUB_STEP_SUMMARY"
+          set -euo pipefail
+          python3 .github/scripts/summarize-speed.py \
+            --input 'results/run-*.txt' \
+            --output results/report.md
 
-      - name: "Upload benchmark results"
+          cpu_model=$(lscpu | sed -n 's/^Model name:[[:space:]]*//p' | head -n 1)
+          {
+            cat results/report.md
+            echo "### Environment"
+            echo
+            echo "- Architecture: \`${{ matrix.arch }}\`"
+            echo "- CPU: \`${cpu_model}\`"
+            echo "- portable: \`$(git rev-parse HEAD)\`"
+            echo "- OpenBSD: \`$(git -C openbsd rev-parse HEAD)\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: "Upload performance report"
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: "performance-${{ github.run_id }}-${{ github.run_attempt }}"
+          name: "performance-${{ matrix.arch }}-${{ github.run_id }}-${{ github.run_attempt }}"
           path: "results"
           if-no-files-found: warn
-          retention-days: 30
+          retention-days: 90
