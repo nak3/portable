@@ -1,0 +1,136 @@
+name: "Performance"
+
+on:
+  pull_request: {}
+  workflow_dispatch:
+    inputs:
+      base_ref:
+        description: "Git ref to use as the baseline"
+        required: true
+        default: "master"
+        type: string
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.event.number || github.ref }}"
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    name: "Compare base and head"
+    runs-on: "ubuntu-24.04"
+    timeout-minutes: 30
+    env:
+      BASE_REPOSITORY: "${{ github.event.pull_request.base.repo.full_name || github.repository }}"
+      BASE_REF: "${{ github.event.pull_request.base.sha || inputs.base_ref }}"
+      HEAD_REPOSITORY: "${{ github.event.pull_request.head.repo.full_name || github.repository }}"
+      HEAD_REF: "${{ github.event.pull_request.head.sha || github.sha }}"
+      REPETITIONS: 3
+      WARNING_THRESHOLD: 10
+
+    steps:
+      - name: "Checkout base"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: "${{ env.BASE_REPOSITORY }}"
+          ref: "${{ env.BASE_REF }}"
+          path: "base"
+          persist-credentials: false
+
+      - name: "Checkout head"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: "${{ env.HEAD_REPOSITORY }}"
+          ref: "${{ env.HEAD_REF }}"
+          path: "head"
+          persist-credentials: false
+
+      - name: "Install build dependencies"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build
+
+      - name: "Record environment"
+        run: |
+          mkdir results
+          {
+            echo "base: $BASE_REPOSITORY@$BASE_REF"
+            echo "head: $HEAD_REPOSITORY@$HEAD_REF"
+            uname -a
+            cmake --version
+            ninja --version
+            cc --version
+            lscpu
+          } > results/environment.txt
+
+      - name: "Build base"
+        run: |
+          cmake -S base -B base/build -GNinja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER=gcc \
+            -DENABLE_ASM=ON \
+            -DLIBRESSL_APPS=ON \
+            -DLIBRESSL_TESTS=OFF
+          cmake --build base/build --target openssl --parallel 4
+
+      - name: "Build head"
+        run: |
+          cmake -S head -B head/build -GNinja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER=gcc \
+            -DENABLE_ASM=ON \
+            -DLIBRESSL_APPS=ON \
+            -DLIBRESSL_TESTS=OFF
+          cmake --build head/build --target openssl --parallel 4
+
+      - name: "Run benchmarks"
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          benchmarks=(
+            sha256
+            sha512
+            aes-128-gcm
+            aes-256-gcm
+            chacha20-poly1305
+            ecdsap256
+            mlkem768
+          )
+
+          run_benchmark() {
+            local revision=$1
+            local round=$2
+            "${revision}/build/apps/openssl/openssl" speed -mr "${benchmarks[@]}" \
+              > "results/${revision}-${round}.txt" 2>&1
+          }
+
+          for ((round = 1; round <= REPETITIONS; round++)); do
+            if ((round % 2 == 1)); then
+              run_benchmark base "$round"
+              run_benchmark head "$round"
+            else
+              run_benchmark head "$round"
+              run_benchmark base "$round"
+            fi
+          done
+
+      - name: "Compare results"
+        run: |
+          python3 head/.github/scripts/compare-speed.py \
+            --base 'results/base-*.txt' \
+            --head 'results/head-*.txt' \
+            --warning-threshold "$WARNING_THRESHOLD" \
+            --output results/comparison.md
+          cat results/comparison.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: "Upload benchmark results"
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: "performance-${{ github.run_id }}-${{ github.run_attempt }}"
+          path: "results"
+          if-no-files-found: warn
+          retention-days: 30
