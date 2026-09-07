@@ -78,7 +78,7 @@ jobs:
         run: emcmake cmake -Bbuild
         env:
           CFLAGS: "-gsource-map -fsanitize=address"
-          LDFLAGS: "-fsanitize=address"
+          LDFLAGS: "-fsanitize=address -sALLOW_MEMORY_GROWTH"
 
       - name: "Build"
         run: cmake --build build --config Release --parallel 4
