@@ -17,9 +17,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: "Android 16"
-            min-nal: 36
-            max-nal: 36
+          - name: "Minimum API 26"
+            api-level: 26
+          - name: "Latest API"
+            api-level: latest
     steps:
       - name: "Checkout repository"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -36,5 +37,4 @@ jobs:
           ANDROID_NDK_HOME="$ANDROID_NDK_LATEST_HOME" ./scripts/test
         env:
           ARCH: "android"
-          MIN_NAL: "${{ matrix.min-nal }}"
-          MAX_NAL: "${{ matrix.max-nal }}"
+          ANDROID_API_LEVEL: "${{ matrix.api-level }}"
