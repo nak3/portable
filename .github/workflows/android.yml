@@ -31,13 +31,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build
 
-      - name: "Install Android NDK"
-        run: |
-          sdkmanager "ndk;29.0.14206865"
-          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/29.0.14206865" >> "$GITHUB_ENV"
-
       - name: "Run CI script"
-        run: ./scripts/test
+        run: |
+          ANDROID_NDK_HOME="$ANDROID_NDK_LATEST_HOME" ./scripts/test
         env:
           ARCH: "android"
           MIN_NAL: "${{ matrix.min-nal }}"

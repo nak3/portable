@@ -216,15 +216,15 @@ elif [ "$ARCH" = "android" ]; then
 		echo "##### Date: `date`, Native API level: $NAL, ABI: $ABI"
 
 		(
-		 build_dir=build-$NAL_$ABI
+		 build_dir=build-${NAL}_${ABI}
 		 rm -fr $build_dir
 		 mkdir $build_dir
 		 cd $build_dir
-		 echo "##### cmake -GNinja -DCMAKE_MAKE_PROGRAM=ninja -DANDROID_NDK=$ANDROID_NDK_HOME -DCMAKE_TOOLCHAIN_FILE=$TC_FILE -DANDROID_ABI=$ABI -DANDROID_NATIVE_API_LEVEL=$NAL .."
+		 echo "##### cmake -GNinja -DCMAKE_MAKE_PROGRAM=ninja -DANDROID_NDK=$ANDROID_NDK_HOME -DCMAKE_TOOLCHAIN_FILE=$TC_FILE -DANDROID_ABI=$ABI -DANDROID_PLATFORM=android-$NAL .."
 		 cmake -GNinja -DCMAKE_MAKE_PROGRAM=ninja \
 		 -DANDROID_NDK=$ANDROID_NDK_HOME \
 		 -DCMAKE_TOOLCHAIN_FILE=$TC_FILE \
-		 -DANDROID_ABI=$ABI -DANDROID_NATIVE_API_LEVEL=$NAL \
+		 -DANDROID_ABI=$ABI -DANDROID_PLATFORM=android-$NAL \
 		 -DENABLE_ASM=${ENABLE_ASM} ..
 
 		 ninja -j 4
