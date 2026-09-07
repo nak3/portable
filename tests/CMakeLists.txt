@@ -68,7 +68,7 @@ file(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR} TEST_SOURCE_DIR)
 function(prepare_emscripten_test_target TARGET_NAME)
 	if(EMSCRIPTEN)
 		set_target_properties(${TARGET_NAME} PROPERTIES LINK_FLAGS
-			"-sALLOW_MEMORY_GROWTH --preload-file ${TEST_SOURCE_DIR} ")
+			"-sALLOW_MEMORY_GROWTH -sNODERAWFS=1")
 	endif()
 endfunction()
 
