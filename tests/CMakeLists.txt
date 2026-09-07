@@ -67,14 +67,8 @@ file(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR} TEST_SOURCE_DIR)
 
 function(prepare_emscripten_test_target TARGET_NAME)
 	if(EMSCRIPTEN)
-		cmake_parse_arguments(PREPARE_EMSCRIPTEN "HOST_FILESYSTEM" "" "" ${ARGN})
-		if(PREPARE_EMSCRIPTEN_HOST_FILESYSTEM)
-			set_target_properties(${TARGET_NAME} PROPERTIES LINK_FLAGS
-				"-sALLOW_MEMORY_GROWTH -sNODERAWFS=1")
-		else()
-			set_target_properties(${TARGET_NAME} PROPERTIES LINK_FLAGS
-				"-sALLOW_MEMORY_GROWTH --preload-file ${TEST_SOURCE_DIR} ")
-		endif()
+		set_target_properties(${TARGET_NAME} PROPERTIES LINK_FLAGS
+			"-sALLOW_MEMORY_GROWTH -sNODERAWFS=1")
 	endif()
 endfunction()
 
@@ -873,7 +867,7 @@ add_platform_test(ssl_verify_param ssl_verify_param)
 # ssl_verify
 add_executable(ssl_verify ssl_verify.c)
 target_link_libraries(ssl_verify ${OPENSSL_TEST_LIBS})
-prepare_emscripten_test_target(ssl_verify HOST_FILESYSTEM)
+prepare_emscripten_test_target(ssl_verify)
 if(HAVE_PERL_IO_SOCKET_SSL_UTILS)
 	if(WIN32)
 		add_test(NAME ssl_verify COMMAND
