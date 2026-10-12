@@ -2,8 +2,7 @@
 name: "Linux"
 
 on:
-  push:
-    branches: ["master", "OPENBSD_8_0", "OPENBSD_7_9", "OPENBSD_7_8"]
+  push: {}
   pull_request: {}
   schedule:
     - cron: "0 0 * * *" # At 00:00 daily.
