@@ -1,0 +1,142 @@
+# GitHub Actions workflow to run tests on Linux.
+name: "Linux"
+
+on:
+  push:
+    branches: ["master", "OPENBSD_8_0", "OPENBSD_7_9", "OPENBSD_7_8"]
+  pull_request: {}
+  schedule:
+    - cron: "0 0 * * *" # At 00:00 daily.
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.event.number || github.ref }}"
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  # Test against all supported architectures.
+  test:
+    name: "${{ matrix.os }}/${{ matrix.arch }} (${{ matrix.compiler }})"
+    runs-on: "${{ matrix.os }}"
+    if: ${{ github.repository_owner == 'libressl' || github.event_name != 'schedule' }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-24.04", "ubuntu-26.04"]
+        arch: ["native", "arm32", "arm64", "mingw32", "mingw64"]
+        compiler: ["gcc"]
+        include:
+          - os: "ubuntu-24.04"
+            arch: "native"
+            compiler: "clang"
+          - os: "ubuntu-26.04"
+            arch: "native"
+            compiler: "clang"
+          - os: "ubuntu-26.04" # loong64
+            arch: "loong64"
+            compiler: "gcc"
+          - os: "ubuntu-26.04"
+            arch: "riscv64"
+            compiler: "gcc"
+          - os: "ubuntu-26.04-arm"
+            arch: "native"
+            compiler: "gcc"
+          - os: "ubuntu-26.04-arm"
+            arch: "native"
+            compiler: "clang"
+
+            # Run mips32/mips64 on ubuntu-22.04 and ubuntu-24.04.
+            # Ubuntu 26.04 drops packages needed for mips32/mips64 tests.
+          - os: "ubuntu-22.04"
+            arch: "mips32"
+            compiler: "gcc"
+          - os: "ubuntu-22.04"
+            arch: "mips64"
+            compiler: "gcc"
+          - os: "ubuntu-24.04"
+            arch: "mips32"
+            compiler: "gcc"
+          - os: "ubuntu-24.04"
+            arch: "mips64"
+            compiler: "gcc"
+
+    steps:
+      - name: "Checkout repository"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: "Install test dependencies"
+        env:
+          ARCH: "${{ matrix.arch }}"
+        run: |
+          packages=(cmake ninja-build libio-socket-ssl-perl)
+          case "$ARCH" in
+            mingw32|mingw64)
+              packages+=(mingw-w64)
+              ;;
+            arm32)
+              packages+=(qemu-user qemu-user-binfmt binfmt-support g++-arm-linux-gnueabihf)
+              ;;
+            arm64)
+              packages+=(qemu-user qemu-user-binfmt binfmt-support g++-aarch64-linux-gnu)
+              ;;
+            loong64)
+              packages+=(qemu-user qemu-user-binfmt binfmt-support g++-14-loongarch64-linux-gnu)
+              ;;
+            mips32)
+              packages+=(qemu-user qemu-user-binfmt binfmt-support g++-mipsel-linux-gnu)
+              ;;
+            mips64)
+              packages+=(qemu-user qemu-user-binfmt binfmt-support g++-mips64el-linux-gnuabi64)
+              ;;
+            riscv64)
+              packages+=(qemu-user qemu-user-binfmt binfmt-support g++-riscv64-linux-gnu)
+              ;;
+          esac
+          sudo apt-get update
+          sudo apt-get install -y "${packages[@]}"
+          perl -MIO::Socket::SSL::Utils -e 1
+
+      - name: "Run tests"
+        run: ./scripts/test || (status=$?; cat tests/test-suite.log; exit $status)
+        env:
+          ARCH: "${{ matrix.arch }}"
+          CC: "${{ matrix.compiler }}"
+
+  # Test ASAN with and without ASM enabled.
+  test-asan:
+    name: "${{ matrix.os }} - ASAN (${{ matrix.asm == 'ON' && 'asm' || 'no-asm' }})"
+    runs-on: "${{ matrix.os }}"
+    if: ${{ github.repository_owner == 'libressl' || github.event_name != 'schedule' }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        asm: [ON, OFF]
+        os: ["ubuntu-24.04", "ubuntu-24.04-arm"]
+    steps:
+      - name: "Checkout repository"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: "Install test dependencies"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build libio-socket-ssl-perl
+          perl -MIO::Socket::SSL::Utils -e 1
+
+      - name: "Run tests"
+        run: ./scripts/test
+        env:
+          ARCH: "native"
+          CC: "clang"
+          CFLAGS: "-ggdb -fsanitize=address"
+          LDFLAGS: "-fsanitize=address"
+          ENABLE_ASM: "${{ matrix.asm }}"
+          CTEST_OUTPUT_ON_FAILURE: 1
