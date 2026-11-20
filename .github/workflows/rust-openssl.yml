@@ -3,6 +3,8 @@ name: "rust-openssl"
 
 on:
   workflow_dispatch:
+  push:
+    branches: [rust-openssl-test]
   schedule:
     - cron: "0 0 * * *" # At 00:00 daily.
 
@@ -14,7 +16,11 @@ permissions: {}
 
 jobs:
   test:
-    name: "Test"
+    name: "Test (${{ matrix.variant }})"
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [baseline, revert-v3-only]
     runs-on: "ubuntu-26.04"
     if: ${{ github.repository_owner == 'libressl' || github.event_name != 'schedule' }}
     permissions:
@@ -25,15 +31,35 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: "Build LibreSSL"
+      - name: "Prepare LibreSSL sources"
         run: |
           ./autogen.sh
+          git -C openbsd rev-parse HEAD
+
+      - name: "Reverse the X.509 v3-only change"
+        if: ${{ matrix.variant == 'revert-v3-only' }}
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source = Path("crypto/x509/x509_purp.c")
+          original = source.read_text()
+          current = "\tversion = X509_get_version(x);\n\tif (version != 2)\n"
+          previous = "\tversion = X509_get_version(x);\n\tif (version < 0 || version > 2)\n"
+          if original.count(current) != 1:
+              raise SystemExit("Expected one version check from upstream commit 2c4a3b22")
+          source.write_text(original.replace(current, previous))
+          PY
+
+      - name: "Build LibreSSL"
+        run: |
           ./configure --prefix="${HOME}/opt"
           make all install
 
       - name: "Clone rust-openssl"
         run: |
-          git clone https://github.com/sfackler/rust-openssl.git
+          git clone https://github.com/rust-openssl/rust-openssl.git
+          git -C rust-openssl rev-parse HEAD
 
       - name: "Run rust-openssl tests"
         run: |
