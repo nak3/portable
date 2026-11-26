@@ -107,6 +107,48 @@ jobs:
           ARCH: "${{ matrix.arch }}"
           CC: "${{ matrix.compiler }}"
 
+  test-armv7-clang:
+    name: "ARMv7 (Clang, CMake)"
+    runs-on: ubuntu-26.04
+    if: ${{ github.repository_owner == 'libressl' || github.event_name != 'schedule' }}
+    permissions:
+      contents: read
+    steps:
+      - name: "Checkout repository"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: "Install build dependencies"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake clang cmake gcc-arm-linux-gnueabihf libtool ninja-build
+
+      - name: "Generate source tree"
+        run: ./autogen.sh
+
+      - name: "Configure for ARMv7"
+        run: |
+          cmake -S . -B build-armv7 -G Ninja \
+            -DCMAKE_SYSTEM_NAME=Linux \
+            -DCMAKE_SYSTEM_PROCESSOR=armv7 \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_C_COMPILER_TARGET=armv7-linux-gnueabihf \
+            -DCMAKE_ASM_COMPILER=clang \
+            -DCMAKE_ASM_COMPILER_TARGET=armv7-linux-gnueabihf \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: "Check that CMake excludes unsupported branch protection"
+        run: |
+          test -s build-armv7/compile_commands.json
+          if grep -F -- '-mbranch-protection=standard' build-armv7/compile_commands.json; then
+            echo "::error::CMake enabled branch protection for ARMv7"
+            exit 1
+          fi
+
+      - name: "Build for ARMv7"
+        run: cmake --build build-armv7
+
   # Test ASAN with and without ASM enabled.
   test-asan:
     name: "${{ matrix.os }} - ASAN (${{ matrix.asm == 'ON' && 'asm' || 'no-asm' }})"
